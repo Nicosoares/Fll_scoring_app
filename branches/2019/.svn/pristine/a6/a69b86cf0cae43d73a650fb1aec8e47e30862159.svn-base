@@ -1,0 +1,12 @@
+digraph initialize_playoff_bracket {
+
+"playoff_index.jsp" -> StorePlayoffParameters [label="Initialize Brackets"];
+
+StorePlayoffParameters -> "bracket_parameters.jsp";
+
+"bracket_parameters.jsp" -> BracketParameters;
+
+BracketParameters -> InitializeBrackets;
+
+InitializeBrackets -> "playoff_index.jsp";
+}

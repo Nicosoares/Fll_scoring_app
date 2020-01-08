@@ -1,0 +1,17 @@
+digraph edit_team {
+
+"admin_index.jsp" -> "admin_select_team.jsp" [label="Edit Team"];
+
+"admin_index.jsp" -> "editTeam.jsp" [label="Add Team"];
+
+"admin_select_team.jsp" -> "editTeam.jsp" [label="teamNumber"];
+
+"editTeam.jsp" -> CommitTeam;
+
+"editTeam.jsp" -> "admin_index.jsp" [label="Cancel"];
+
+CommitTeam -> "admin_select_team.jsp" [label="Edit/Delete Team"];
+
+CommitTeam -> "admin_index.jsp" [label="Add Team"];
+
+}

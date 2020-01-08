@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html manifest="manifest.appcache">
+<head>
+	<meta charset="utf-8">
+	<meta name="author" content="Clark Winkelmann">
+	<meta name="generator" content="Bluefish 2.2.6">
+	<title>FLL Timer</title>
+	<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="ready js-ready-message" style="display: none;">Ready</div>
+
+<div class="timer js-timer-wrapper">
+	<div class="number auto-width js-minutes-10" data-value="0">
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+	</div>
+	<div class="number js-minutes-1" data-value="2">
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+	</div>
+	<div class="separator"></div>
+	<div class="number js-seconds-10" data-value="3">
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+	</div>
+	<div class="number js-seconds-1" data-value="0">
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+		<div class="segment"></div>
+	</div>
+</div>
+
+<div class="controls">
+	<button class="js-hide-audio-buttons-button">Show Audio Buttons</button>
+	<input type="text" class="js-customize-input" placeholder="2:30" style="display: none;">
+	<button class="js-customize-button">Customize</button>
+	<button class="js-reset-button">Reset</button>
+	<button class="js-start-button">Start</button>
+
+	<button class="js-start-sound-button" style="display: none">Start Sound</button>
+	<button class="js-run-sound-button" style="display: none">Run Sound</button>
+	<button class="js-end-sound-button" style="display: none">End Sound</button>
+	<button class="js-round-fail-button" style="display: none">Failed Round</button>
+</div>
+	
+<script src="js/jquery-3.2.0.min.js"></script>
+<script src="js/script.js"></script>
+
+</body>
+</html>

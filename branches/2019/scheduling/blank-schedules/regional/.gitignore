@@ -1,0 +1,4 @@
+*.pdf
+.~lock*
+*.csv
+*.obj.txt

@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Exec=xterm -hold -e /sbin/ifconfig
+Name=IP Address Info
+Categories=Utility;X-fllsw;

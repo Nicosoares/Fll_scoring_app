@@ -1,0 +1,17 @@
+digraph AssignJudges {
+
+"admin_index.jsp" -> GatherJudgeInformation [label="Assign Judges"];
+
+GatherJudgeInformation -> "judges.jsp";
+
+"judges.jsp" -> VerifyJudges;
+
+VerifyJudges -> "judges.jsp" [label="if missing phone number"];
+VerifyJudges -> "displayJudges.jsp" [label="no errors"];
+
+"displayJudges.jsp" -> CommitJudges [label="Commit the judges"];
+"displayJudges.jsp" -> "admin_index.jsp" [label="Cancel"];
+
+CommitJudges -> "admin_index.jsp";
+
+}

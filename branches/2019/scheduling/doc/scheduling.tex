@@ -1,0 +1,274 @@
+% Copyright (c) 2011 HighTechKids.  All rights reserved
+% HighTechKids is on the web at: http://www.hightechkids.org
+% This code is released under GPL; see LICENSE.txt for details.
+
+\documentclass[letterpaper,11pt]{report}
+\usepackage{fullpage}
+\usepackage{float}
+\usepackage{alltt}
+
+\usepackage[table,usenames,dvipsnames]{xcolor}
+
+% FloatBarrier
+\usepackage{placeins}
+
+% html links
+\usepackage{hyperref}
+
+% algorithm environment for pseudocode 
+\usepackage{algorithm}
+\usepackage{algorithmic}
+%\floatname{algorithm}{}
+
+% draft - include comments as footnotes and marginpars
+\newif\ifdraft
+\drafttrue
+\ifdraft
+\typeout{DRAFT - WITH COMMENTS}
+\newcommand{\doccomment}[3]%
+{\marginpar{\textcolor{#2}{\bf #1}}%
+%\footnote{\textcolor{#2}{#3}}%
+\footnote{{\color{#2}#3}}%
+}
+\else
+\typeout{NOT DRAFT - NO COMMENTS}
+\newcommand{\doccomment}[3]{}
+\fi
+
+% comments for individuals
+\newcommand{\jpscomment}[1]%
+{\doccomment{SCHEWE}{Bittersweet}{#1}}
+
+\title{FLL Tournament Scheduling}
+\author{Jon Schewe}
+
+\begin{document}
+\maketitle
+
+% Note: the captions on the algorithms are used in the comments for the
+% constraints in the Java scheduler and verifier. The portion
+% before the ":" is in the Java.
+\chapter{FLL Scheduling Constraints}
+
+\section{Definitions}
+
+\begin{algorithm}
+\caption{param:0 - Basic definitions and parmaeters}
+\begin{algorithmic}
+\STATE $SOS$ - the start of the tournament (time 0)
+\STATE $TN$ - number of teams at the tournament
+\STATE $T_{0}, T_{1}, \dots, T_{n}$ - teams
+\STATE $div(T_{0})$ - division of team 0
+\STATE $P(T_{0}, 1)$ - performance time for team 0 round 1
+\STATE $S(T_{0}, cat)$ - subjective time for team 0 subjective category $cat$
+\STATE $changetime = 15$ - time between events
+\STATE $performanceDuration = 5$ - amount of time for a performance run
+\STATE $subjectiveDuration = 20$ - amount of time to judge a subjective
+category for a team
+\end{algorithmic}
+\end{algorithm}
+
+\FloatBarrier
+\section{Subjective}
+%TODO figure out how to put in a lunch break
+
+Everything defined here is true for all subjective judging categories.
+
+\begin{algorithm}
+\caption{param:1 - Parameters for subjective judging}
+\begin{algorithmic}
+\STATE $JN_{cat,div}$ - number of judges for category $cat$ in division
+$div$ (typically 1 for regional, more for state)
+\STATE $subjectiveStart = SOS$
+\STATE $NSubj = 3$ - number of subjective categories
+\end{algorithmic}
+\end{algorithm}
+
+\FloatBarrier
+\section{Performance}
+\begin{algorithm}
+\caption{param:2 - Performance parameters}
+\begin{algorithmic}
+\STATE $TableN$ - number of tables
+\STATE $performanceStart = SOS + 60$ - give time for teams to get settled
+\STATE $NRounds$ - the number of performance rounds (typically 3)
+\STATE $performanceChangetime = 45$ - time between performance rounds
+%\STATE $specialPerformanceChangetime = 30$ - time between performance
+%rounds for teams with opponents in a different round
+\end{algorithmic}
+\end{algorithm}
+
+\FloatBarrier
+\section{Team Constraints}
+These constraints are applied to each team $T$.
+
+\begin{algorithm}
+\caption{team:1 - Relationship between each subjective category}
+\begin{algorithmic}
+\FOR{$category1 \in SubjectiveCategories$}
+  \FOR{$category2 \in SubjectiveCategories$}
+    \IF{$category1 != category2$}
+      \IF{$category1_{end} <= category2_{start}$}
+        \STATE $S(T, category1)_{end} + changetime <= S(T, category2)_{start}$
+      \ELSE
+        \STATE $S(T, category2)_{end} + changetime <= S(T, category1)_{start}$
+      \ENDIF
+    \ENDIF
+  \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{team:2 - Basic performance constraints}
+\begin{algorithmic}
+\FOR{$round \in 1 \dots NRounds$}
+  \STATE $P(T, round)_{end} = P(T, round)_{start} + performanceDuration$
+\ENDFOR
+\FOR{$round \in 2 \dots NRounds$}
+  \STATE $P(T, round-1)_{end} + performanceChangetime <= P(T, round)_{start}$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{team:6 - Basic subjective constraints}
+\begin{algorithmic}
+\FOR{$cat \in 1 \dots NSubj$}
+  \STATE $S(T, cat)_{end} = S(T, cat)_{start} + subjectiveDuration$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{team:3 - Relationships between performance rounds}
+\begin{algorithmic}
+\FOR{$round \in 2 \dots NRounds$}
+  \STATE $P(T, round-1)_{end} + performanceChangetime <= P(T, round)_{start}$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+
+\FloatBarrier
+\begin{algorithm}
+\caption{team:4 - Relationships between subjective categories judging and performance}
+\begin{algorithmic}
+\FOR{$category \in SubjectiveCategories$}
+  \FOR{$round \in 1 \dots NRounds$}
+    \IF{$category_{end} <= P(T, round)_{start}$}
+      \STATE $S(T, category)_{end} + changetime <= P(T, round)_{start}$
+    \ELSE
+      \STATE $P(T, round)_{end} + changetime <= S(T, category)_{start}$
+    \ENDIF
+  \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{team:5 - Each team should always compete against other teams}
+\begin{algorithmic}
+\FOR{$round \in 1 \dots NRounds$}
+  \STATE $opp = opponent(T, round)$
+  \FOR{$r \in round+1 \dots NRounds$}
+    \STATE $opp != opponent(P, r)$
+  \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+
+\FloatBarrier
+\section{Tournament Constraints}
+These constraints pertain to the tournament as a whole.
+
+\begin{algorithm}
+\caption{tournament:1 - Limit the number of teams competing on the performance tables at
+  the same time}
+\begin{algorithmic}
+
+\STATE $teamsAtTime = []$
+\FOR{$T \in teams$}
+  \FOR{$i \in 1 \dots NRounds$}
+    \STATE $teamsAtTime[T_{P_{i_{start}}}].append(T)$
+  \ENDFOR
+  \FOR{$key \in teamsAtTime.keys()$}
+    \IF{$teamsAtTime[key].size() > PN$}
+      \STATE BACKTRACK - perhaps can make this a constraint?
+    \ENDIF
+  \ENDFOR
+\ENDFOR
+
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{tournament:2 - Limit the number of teams at a subjective judging station}
+\begin{algorithmic}
+\FOR{$cat \in SubjectiveCategories$}
+  \FOR{$div \in divisions$}
+    \STATE $teamsAtTime_{cat,div} = []$
+  \ENDFOR
+  \FOR{$T \in teams$}
+    \STATE $teamsAtTime_{cat,div(T)}[T_{cat_{start}}].append(T)$
+  \ENDFOR
+  \FOR{$div \in divisions$}
+    \FOR{$key \in teamsAtTime_{cat,div}.keys()$}
+      \IF{$teamsAtTime_{cat,div}[key].size() > JN_{cat,div}$}
+        \STATE BACKTRACK - perhaps can make this a constraint?
+      \ENDIF
+    \ENDFOR
+  \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{tournament:3 - make sure subjective judging start after $subjectiveStart$}
+\begin{algorithmic}
+\FOR{$T \in teams$}
+  \FOR{$cat \in SubjectiveCategories$}
+    \STATE $S(T, cat) >= subjectiveStart$
+  \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{tournament:4 - make sure performance starts after
+$performanceStart$.}
+\begin{algorithmic}
+\FOR{$T \in teams$}
+  \STATE $P(T, 1) >= performanceStart$
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\FloatBarrier
+\section{Implementation ideas}
+Possible solvers include:
+\begin{itemize}
+\item \url{http://www.ict.kth.se/courses/ID2204/software.html}{Gecode/J} - isn't native Java so dropped
+\item \url{http://www.koalog.com/php/jcs.php}{Koalog} - is commercial
+\item \url{http://choco.emn.fr/}{Choco}
+\item \url{http://jacop.osolpro.com/}{JaCoP} - implements Minizinc
+\end{itemize}
+
+\FloatBarrier
+\section{Issues}
+There are some issues to work out with these constraints.
+\begin{itemize}
+\item How to handle odd number of teams? Currently I'm thinking I'll just
+  add a dummy to make it even.
+\item How to handle alternating sets of tables for performance
+\item Conditionally adding constraints
+\item Can the number of teams in a subjective judging category at the same
+  time be handled as a constraint? Probably an all different constraint,
+  although how to handle multiple judges for the same group of teams?
+  Perhaps put in judging group up front?
+\item Can the number of teams at a performance table be handled directly?
+\end{itemize}
+
+
+\end{document}

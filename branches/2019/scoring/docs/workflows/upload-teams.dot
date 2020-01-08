@@ -1,0 +1,13 @@
+digraph upload_teams {
+
+"admin_index.jsp" -> UploadTeams [label="uploadSpreadsheet"];
+
+UploadTeams -> "teamColumnSelection.jsp" [label="Populate AllTeams"];
+
+"teamColumnSelection.jsp" -> "verifyTeams.jsp" [label="Next"];
+
+"verifyTeams.jsp" -> "teamColumnSelection.jsp" [label="Missing column selections OR Duplicate teams found"];
+
+"verifyTeams.jsp" -> "index.jsp" [label="success, assign tournament teams"];
+
+}

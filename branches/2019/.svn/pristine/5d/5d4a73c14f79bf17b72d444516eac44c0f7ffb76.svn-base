@@ -1,0 +1,43 @@
+digraph import_database {
+
+"developer_index.jsp" -> ImportDBDump [label="Import Database"];
+
+ImportDBDump -> "selectTournament.jsp";
+
+ImportDBDump -> "developer_index.jsp" [label="Incompatible challenge descriptions"]
+
+"selectTournament.jsp" -> CheckTournamentExists;
+
+CheckTournamentExists -> "promptCreateTournament.jsp";
+
+CheckTournamentExists -> FindMissingTeams [label="tournament found"];
+
+"promptCreateTournament.jsp" -> CreateTournament;
+
+CreateTournament -> "selectTournament.jsp" [label="Cancel create tournament or error creating tournament"];
+
+CreateTournament -> CheckTournamentExists;
+
+FindMissingTeams -> CheckTeamInfo;
+
+FindMissingTeams -> "promptCreateMissingTeams.jsp" [label="Found missing teams"];
+
+"promptCreateMissingTeams.jsp" -> AddMissingTeams;
+
+"promptCreateMissingTeams.jsp" -> "selectTournament.jsp" [label="Don't create teams"];
+
+AddMissingTeams -> CheckTeamInfo;
+
+CheckTeamInfo -> ExecuteImport;
+
+CheckTeamInfo -> "resolveTeamInfoDifferences.jsp" [label="Found differences"];
+
+"resolveTeamInfoDifferences.jsp" -> CommitTeamChanges;
+
+"resolveTeamInfoDifferences.jsp" -> "selectTournament.jsp" [label="Cancel"];
+
+CommitTeamChanges -> CheckTeamInfo;
+
+ExecuteImport -> selectTournament_jsp;
+
+}

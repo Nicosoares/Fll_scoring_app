@@ -1,0 +1,7 @@
+scheduling/blank-schedules/*.pdf
+fll.log*
+*.log*
+cobertura.ser
+.DS_Store
+*~
+.*.html

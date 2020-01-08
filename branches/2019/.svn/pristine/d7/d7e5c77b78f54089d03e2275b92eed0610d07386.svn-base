@@ -1,0 +1,515 @@
+% Copyright (c) 2011 HighTechKids.  All rights reserved
+% HighTechKids is on the web at: http://www.hightechkids.org
+% This code is released under GPL; see LICENSE.txt for details.
+
+\documentclass[letterpaper,11pt]{report}
+\usepackage{fullpage}
+\usepackage{float}
+\usepackage{alltt}
+\usepackage{enumerate}
+
+\usepackage[table,usenames,dvipsnames]{xcolor}
+
+% allow more floats on a page
+\setcounter{totalnumber}{10}
+
+% FloatBarrier
+\usepackage{placeins}
+
+% html links
+\usepackage{hyperref}
+
+% algorithm environment for pseudocode 
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\floatname{algorithm}{Constraint}
+
+% draft - include comments as footnotes and marginpars
+\newif\ifdraft
+\drafttrue
+\ifdraft
+\typeout{DRAFT - WITH COMMENTS}
+\newcommand{\doccomment}[3]%
+{\marginpar{\textcolor{#2}{\bf #1}}%
+%\footnote{\textcolor{#2}{#3}}%
+\footnote{{\color{#2}#3}}%
+}
+\else
+\typeout{NOT DRAFT - NO COMMENTS}
+\newcommand{\doccomment}[3]{}
+\fi
+
+% comments for individuals
+\newcommand{\jpscomment}[1]%
+{\doccomment{SCHEWE}{Bittersweet}{#1}}
+
+\title{FLL Tournament Scheduling (MILP formulation)}
+\author{Jon Schewe}
+
+\begin{document}
+\maketitle
+
+% Note: the captions on the algorithms are used in the comments for the
+% constraints in the Java scheduler and verifier. The portion
+% before the ":" is in the Java.
+\chapter{FLL Scheduling Constraints}
+
+\section{Parameters}
+\begin{itemize}
+
+\item[$TInc$] Number of minutes to a slot, typically 5
+\item[$TMax$] Maximum timeslot plus 1 to keep teams from starting too late, typically 8 hours. $((12 * 60)/TInc) + 1$
+\item[$NSubjective$] The number of subjective judging stations
+\item[$NRounds$] The number of performance rounds
+\item[$NTables$] The number of performance tables
+\item[$NGroups$] The number of judging groups, typically 2
+
+\item[$\alpha^{n}$] Number of time units that subjective judging
+  category $n$ takes.
+
+\item[$\alpha^{perf}$] Number of time units that performance judging
+  takes. $\alpha^{perf} = 5 / TInc$ \jpscomment{Note that this
+changes when we alternate tables at state}
+
+\item[$ct$] Time to change between judging stations, in time increments. Typically set to 15
+  minutes. $ct = 15/TInc$
+\item[$pct$] Time between performance runs, in time increments. Typically set to 45
+  minutes. $ct = 45/TInc$ \jpscomment{For odd numbered tournaments may be reduced to 30
+    minutes}
+
+\end{itemize}
+
+\section{Definitions}
+\begin{itemize}
+
+\item[$M$] A big number that will invalidate any constraint, 10,000 works well.
+
+\item[$T$] Time, in increments of $TInc$ minutes, $t \in 1 \dots TMax$
+
+\item[$G_{g}$] The teams in judging group $g$
+
+\item[$py_{t}^{g,i,b,s}$] The status of performance table $b$ side $s$ for
+at time $t$ for team $i$ in group $g$. 1 if the table is in use.  
+
+\item[$pz_{t}^{g,i,b,s}$] 1 if team $i$ in group $g$ is starting performance on table $b$,
+  side $s$ at time $t$.
+
+\item[$sy_{t}^{g,i,n}$] The status of subjective judging station $n$ at time $t$ for team
+  $i$ in group $g$, 1 if the station is in use.
+
+\item[$sz_{t}^{g,i,n}$] 1 if team $i$ in group $g$ is starting judging at subjective
+judging station $n$ at time $t$.
+
+
+\end{itemize}
+
+
+\section{Constraints}
+ 
+\subsection{Keep each judging station busy while team $i$ is using it.}
+
+\begin{algorithm}
+\caption{stationBusySubjective}
+$\sum\limits_{u=1}^{min(t, \alpha^{n})} sz_{t-u+1}^{g,i,n} \le sy_{t}^{g,i,n}$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g},
+\forall n \in 1 \dots NSubjective,
+\forall t \in 1 \dots TMax
+$
+\end{algorithm}
+
+\begin{algorithm}
+\caption{stationBusyPerformance}
+$\sum\limits_{u=1}^{min(t, \alpha^{perf})} pz_{t-u+1}^{g,i,b,s} \le py_{t}^{g,i,b,s}$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g}, 
+\forall b \in 1 \dots NTables,
+\forall s \in 1 \dots 2,
+\forall t \in 1 \dots TMax
+$
+\end{algorithm}
+
+
+\FloatBarrier
+\subsection{Note the start of judging at a station upon team transition.}
+\begin{algorithm}
+\caption{stationStartSubjective}
+$sy_{t}^{g,i,n} - sy_{t-1}^{g,i,n} \le sz_{t}^{g,i,n}$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g},
+\forall n \in 1 \dots NSubjective,
+\forall t \in {2 \dots TMax}
+$
+\end{algorithm}
+
+\begin{algorithm}
+\caption{stationStartPerformance}
+$py_{t}^{g,i,b,s} - py_{t-1}^{g,i,b,s} \le pz_{t}^{g,i,b,s}$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g},
+\forall b \in {1 \dots NTables},
+\forall s \in 1 \dots 2,
+\forall t \in {2 \dots TMax}
+$
+\end{algorithm}
+
+
+\FloatBarrier
+\subsection{Ensure that only 1 team ($i$) is at each judging station at a
+given time ($t$).}
+\label{judging_group_constraint}
+
+\begin{algorithm}
+\caption{noOverlapSubjective}
+$\sum\limits_{i \in G_{g}} sy_{t}^{g,i,n} \le 1$          
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall n \in 1 \dots NSubjective,
+\forall t \in T
+$
+\end{algorithm}
+
+\begin{algorithm}
+\caption{noOverlapPerformance}
+$\sum\limits_{g=1}^{NGroups} \sum\limits_{i \in G_{g}} py_{t}^{g,i,b,s} \le 1$
+\hfill $
+\forall b \in 1 \dots NTables,
+\forall s \in 1 \dots 2,
+\forall t \in T
+$
+\end{algorithm}
+
+\FloatBarrier
+\subsection{A team can't be in 2 places at once}
+\begin{algorithm}
+\caption{noOverlapTeam}
+$\sum\limits_{n=1}^{NSubjective} sz_{t}^{g,i,n}
++ \sum\limits_{b=1}^{NTables} ( sz_{t}^{g,i,b,1} + sz_{t}^{g,i,b,2} )
+\le 1
+$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g},
+\forall t \in 1 \dots TMax
+$
+\end{algorithm}
+
+
+\FloatBarrier
+\subsection{Each team must appear at each subjective station once.}
+
+\begin{algorithm}
+\caption{teamSubjective}
+$\sum\limits_{t \in T} sz_{t}^{g,i,n} = 1$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g},
+\forall n \in 1 \dots NSubjective,
+$
+\end{algorithm}
+
+
+\FloatBarrier
+\subsection{Each team must appear in performance $NRounds$ times.}
+
+\begin{algorithm}
+\caption{teamPerformance}
+$\sum\limits_{b=1}^{NTables} \sum\limits_{t \in T} ( pz_{t}^{g,i,b,1} + pz_{t}^{g,i,b,2} ) = NRounds$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g}
+$
+\end{algorithm}
+
+\FloatBarrier
+\subsection{Ensure that teams don't start too close to the end of the
+  tournament.}
+\begin{algorithm}
+\caption{subjectiveEOS}
+$
+\sum\limits_{g=1}^{NGroups}
+\sum\limits_{i \in G_{g}}
+  \sum\limits_{n=1}^{NSubjective} sy_{TMax}^{g,i,n} = 0$
+\end{algorithm}
+
+\begin{algorithm}
+\caption{performanceEOS}
+$
+\sum\limits_{g=1}^{NGroups}
+\sum\limits_{i \in G_{g}}
+  \sum\limits_{b=1}^{NTables}
+  ( py_{TMax}^{g,i,b,1} + py_{TMax}^{g,i,b,2} ) = 0$
+\end{algorithm}
+
+\FloatBarrier
+\subsection{Order the teams for the first subjective category.}
+If we order things such that team 1 must be judged in subjective category 1
+before team 2 and so on we cut out a bunch of search space without removing
+any solutions that we care about. We can't do this for all subjective
+categories because there the order may matter once the first category is
+set.
+\begin{algorithm}
+\caption{subjOrder}
+$
+\sum\limits_{j \in G_{g} \colon j > i}
+  \sum\limits_{p=1}^{t + \alpha^{1} - 1} sz_{p}^{g,j,1} <= 
+( 0 + ( 1 - sz_{t}^{g,i,1} ) * M )$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g}, 
+\forall t \in t
+$
+\end{algorithm}
+
+\FloatBarrier
+\subsection{Enforce change time for each team $i$.}
+
+\FloatBarrier
+\subsubsection{Subjective category $n$ to all subjective categories}
+\begin{algorithm}
+\caption{subjSubjChangetime}
+$sz_{t}^{g,i,n} + sz_{t+u}^{g,i,d} \le 1$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g},
+\forall n \in 1 \dots NSubjective, 
+\forall t \in 1..{TMax - (\alpha^{n} + ct - 1)},
+\forall d \in 1 \dots NSubjective,
+\forall u \in 1 \dots \alpha^{n} + ct - 1$
+\end{algorithm}
+
+\FloatBarrier
+\subsubsection{Subjective category $n$ to all performance stations}
+\begin{algorithm}
+\caption{subjPerfChangetime}
+$sz_{t}^{g,i,n} + pz_{t+u}^{g,i,b,s} \le 1$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g},
+\forall n \in 1 \dots NSubjective, 
+\forall t \in 1..{TMax - (\alpha^{n} + ct - 1)},
+\forall b \in 1 \dots NTables,
+\forall s \in 1 \dots 2,
+\forall u \in 1 \dots \alpha^{n} + ct - 1
+$
+\end{algorithm}
+
+\FloatBarrier
+\subsubsection{Performance on table $b$ side $s$ to all performance
+  stations}
+\begin{algorithm}
+\caption{perfPerfChangetime}
+$pz_{t}^{g,i,b,s} + pz_{t+u}^{g,i,d,e} \le 1$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g},
+\forall b \in 1 \dots NTables,
+\forall s \in 1 \dots 2,
+\forall t \in 1..{TMax - (\alpha^{perf} + ct - 1)},
+\forall d \in 1 \dots NTables,
+\forall e \in 1 \dots 2,
+\forall u \in 1 \dots \alpha^{perf} + ct - 1$
+\end{algorithm}
+
+\FloatBarrier
+\subsubsection{Performance on table $b$ side $s$ to all subjective
+  stations}
+\begin{algorithm}
+\caption{perfSubjChangetime}
+$pz_{t}^{g,i,b,s} + sz_{t+u}^{g,i,n} \le 1$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g},
+\forall b \in 1 \dots NTables,
+\forall s \in 1 \dots 2,
+\forall t \in 1..{TMax - (\alpha^{perf} + ct - 1)},
+\forall n \in 1 \dots NSubjective
+\forall u \in 1 \dots \alpha^{perf} + ct - 1$
+\end{algorithm}
+
+\FloatBarrier
+\subsection{Enforce performance change time.}
+\begin{algorithm}
+\caption{performanceChangetime}
+$
+\sum\limits_{b=1}^{NTables} (
+pz_{t}^{g,i,b,1} + pz_{t}^{g,i,b,2}
++
+pz_{t+u}^{g,i,b,1} + pz_{t+u}^{g,i,b,2})
+\le 1$
+\hfill $
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g}, 
+\forall t \in 1 \dots TMax - (\alpha^{perf} + pct - 1),
+\forall u \in 1 \dots \alpha^{perf} + pct - 1$
+\end{algorithm}
+
+\FloatBarrier
+\subsection{Make sure both sides of a table are always used if one side is
+  used.}
+\begin{algorithm}
+\caption{perfUseBothSides}
+$\sum\limits_{g=1}^{NGroups}\sum\limits_{i \in G_{g}} pz_{t}^{g,i,b,1} 
+= 
+\sum\limits_{g=1}^{NGroups}\sum\limits_{i \in G_{g}}pz_{t}^{g,i,b,2}$
+\hfill $
+\forall b \in 1 \dots NTables,
+\forall t \in T$
+\end{algorithm}
+
+
+\FloatBarrier
+\subsection{Judging groups}
+Each team is only judged at the subjective stations for their judging
+group. This is handled by only constraining teams in the appropriate
+judging group to the appropriate judging station. See \autoref{judging_group_constraint}
+
+
+\FloatBarrier
+\section{Breaks}
+\subsection{Start the performance rounds 60 minutes into the day.}
+\begin{algorithm}
+\caption{performanceStart}
+$
+\sum\limits_{g=1}^{NGroups}
+\sum\limits_{i \in G_{g}} 
+  \sum\limits_{b=1}^{NTables} 
+    \sum\limits_{t = 1}^{60/TInc} 
+      ( py_{t}^{g,i,b,1} + py_{t}^{g,i,b,2} ) = 0$
+\end{algorithm}
+
+% \FloatBarrier
+% \subsection{Break in performance in case things start off schedule}
+% \begin{algorithm}
+% \caption{performanceBreak1}
+% $
+% \sum\limits_{g=1}^{NGroups}
+% \sum\limits_{i \in G_{g}} 
+%   \sum\limits_{b=1}^{NTables} 
+%     \sum\limits_{t = 20/TInc}^{20/TInc + 5/TInc} 
+%       ( py_{t}^{g,i,b,1} + py_{t}^{g,i,b,2} ) = 0$
+% \end{algorithm}
+
+\FloatBarrier
+\subsection{Performance lunch break}
+\begin{algorithm}
+\caption{performanceLunchBreak}
+$
+\sum\limits_{g=1}^{NGroups}
+\sum\limits_{i \in G_{g}} 
+  \sum\limits_{b=1}^{NTables} 
+    \sum\limits_{t = 210/TInc}^{210/TInc + 30/TInc} 
+      ( py_{t}^{g,i,b,1} + py_{t}^{g,i,b,2} ) = 0$
+\end{algorithm}
+
+\FloatBarrier
+\subsection{Break in subjective in case things start off schedule}
+\begin{algorithm}
+\caption{subjectiveBreak1}
+$
+\sum\limits_{g=1}^{NGroups}
+\sum\limits_{i \in G_{g}} 
+  \sum\limits_{n=1}^{NSubjective} 
+    \sum\limits_{t = 60/TInc}^{60/TInc + 10/TInc} 
+      sy_{t}^{g,i,n} = 0$
+\end{algorithm}
+
+\FloatBarrier
+\subsection{Subjective lunch break}
+\begin{algorithm}
+\caption{subjectiveLunchBreak}
+$
+\sum\limits_{g=1}^{NGroups}
+\sum\limits_{i \in G_{g}} 
+  \sum\limits_{n=1}^{NSubjective} 
+    \sum\limits_{t = 190/TInc}^{190/TInc + 30/TInc} 
+      sy_{t}^{g,i,n} = 0$
+\end{algorithm}
+
+
+\FloatBarrier
+\section{Objective function}
+I currently have 2 possible objective functions. The YMax objective
+function should produce better results, but is many times slower.
+Both objective functions try and make everything as early as possible.
+
+\FloatBarrier
+\subsection{Original}
+$Min ( 
+\sum\limits_{t \in T}
+ \sum\limits_{g=1}^{NGroups}
+  \sum\limits_{i \in G_{g}} (
+    \sum\limits_{n=1}^{NSubjective}
+      ( sy_{t}^{g,i,n} \times t )
+  + \sum\limits_{b=1}^{NTables} ( ( py_{t}^{g,i,b,1} + py_{t}^{g,i,b,2} )
+  \times t)
+  )
+) $
+
+\FloatBarrier
+\subsubsection{Greedy version}
+The greedy solver has the following objective implemented. One could
+implement this in the MILP, but given that the greedy solver is working
+faster than the COTS MILP solver, I haven't implemented it in the MILP.
+
+The goal is to minimize based on the following criteria with most important
+first:
+\begin{enumerate}[1]
+\item Earliest performance end time. 
+\item Earliest subjective end time for the smallest division first. We want
+  to make the smallest division finish subjective first so that we can run
+  head to head for that division ealier.
+\item Number of warnings. Find the schedule with the fewest number of soft
+  constraint violations. 
+\end{enumerate}
+
+
+\FloatBarrier
+\subsection{YMax}
+$yMax_{t}$ is an integer variable that is 1 if any judging station is busy at
+time $t$ and 0 otherwise.
+
+\begin{algorithm}
+\caption{objectiveYMaxSubjective}
+$yMax_{t} \ge sy_{t}^{g,i,n}$
+\hfill$
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g}, 
+\forall t \in 1 \dots TMax,
+\forall n \in 1 \dots NSubjective
+$
+\end{algorithm}
+
+\begin{algorithm}
+\caption{objectiveYMaxPerf}
+$yMax_{t} \ge py_{t}^{g,i,b,s}$
+\hfill$
+\forall g \in 1 \dots NGroups,
+\forall i \in G_{g}, 
+\forall t \in 1 \dots TMax,
+\forall b \in 1 \dots NTables,
+\forall s \in 1 \dots 2
+$
+\end{algorithm}
+
+\FloatBarrier
+$objective$ is equal to the largest $t$ that has any judging happening.
+\begin{algorithm}
+\caption{objectiveYMax}
+$objective \ge yMax_{t} * t$
+\hfill
+$\forall t \in 1 \dots TMax$
+\end{algorithm}
+
+\FloatBarrier
+Make everything as early as possible.
+\begin{algorithm}
+\caption{objective}
+$Min(objective)$
+\end{algorithm}
+
+\end{document}
